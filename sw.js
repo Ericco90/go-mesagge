@@ -1,16 +1,12 @@
-const CACHE_NAME = 'jastip-cache-v1';
+const CACHE_NAME = 'pijat-cache-v2';
 const urlsToCache = [
   './',
   './index.html',
   './desa-data.js',
-  './logo.png',
-  './admin-profile.png',
-  './food-sate.png',
-  './food-martabak.png',
-  './food-geprek.png',
-  './gallery-jastip.png',
-  './gallery-antar.png',
-  './gallery-ojeg.png',
+  './logo_pijat.png',
+  './pijat_terapis.jpg',
+  './pijat_tradisional.jpg',
+  './terapi_bekam.jpg',
   './qris.png'
 ];
 
