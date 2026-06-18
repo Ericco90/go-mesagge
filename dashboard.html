@@ -845,7 +845,7 @@
                     const compressedFile = await compressImage(photoFile, 800, 800, 0.7);
                     btnSave.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Mengunggah...`;
 
-                    const fileExt = compressedFile.name.split('.').pop() || 'jpg';
+                    const fileExt = photoFile.name.split('.').pop() || 'jpg';
                     const fileName = `${id}-${Math.random()}.${fileExt}`;
                     const filePath = `terapis/${fileName}`;
                     
