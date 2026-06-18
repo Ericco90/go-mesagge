@@ -182,14 +182,14 @@
             font-size: 0.65rem; font-weight: 600;
             flex-shrink: 0;
         }
-        .status-badge.online { background: var(--green-light); color: var(--green); }
+        .status-badge.online { background: var(--primary-light); color: var(--primary); }
         .status-badge.offline { background: #FEF2F2; color: #EF4444; }
         .status-dot {
             width: 7px; height: 7px;
             border-radius: 50%;
             animation: pulse-dot 1.5s ease-in-out infinite;
         }
-        .status-badge.online .status-dot { background: var(--green); }
+        .status-badge.online .status-dot { background: var(--primary); }
         .status-badge.offline .status-dot { background: #EF4444; animation: none; }
         @keyframes pulse-dot {
             0%, 100% { opacity: 1; transform: scale(1); }
@@ -1257,6 +1257,14 @@
 
     </div>
 
+    <!-- Image Modal -->
+    <div class="qris-modal" id="imageModal" onclick="closeImageModal(event)" style="z-index: 10000; align-items: center;">
+        <div class="qris-modal-content" style="padding: 10px; text-align: center; max-width: 90%; background: transparent; box-shadow: none;">
+            <button class="qris-close" onclick="closeImageModal()" style="color: white; right: 0; top: -30px; font-size: 2rem;">&times;</button>
+            <img id="imageModalSrc" src="" alt="Zoom" style="width: 100%; max-width: 400px; border-radius: var(--radius-md); display: block; margin: 0 auto;">
+        </div>
+    </div>
+
     <!-- Bottom Nav -->
     <div class="bottom-nav">
         <a href="#beranda" class="nav-item active" onclick="setActiveNav(this)">
@@ -1302,6 +1310,18 @@
     function setActiveNav(el) {
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         el.classList.add('active');
+    }
+
+    // === IMAGE MODAL ===
+    function showImageModal(src, event) {
+        event.stopPropagation(); // Mencegah klik terapis-card
+        const modal = document.getElementById('imageModal');
+        document.getElementById('imageModalSrc').src = src;
+        modal.classList.add('show');
+    }
+    function closeImageModal(e) {
+        if(e && e.target.tagName === 'IMG') return; // Jangan tutup jika klik gambar
+        document.getElementById('imageModal').classList.remove('show');
     }
 
     // === TOAST ===
@@ -1426,7 +1446,7 @@
                 }
             }
 
-            let photoHtml = photoUrl ? `<img src="${photoUrl}" referrerpolicy="no-referrer" style="width:100%; height:80px; object-fit:cover;">` : `<div style="width:100%; height:80px; background:#ccc; display:flex; justify-content:center; align-items:center; color:white;"><i class="fas fa-user fa-2x"></i></div>`;
+            let photoHtml = photoUrl ? `<img src="${photoUrl}" referrerpolicy="no-referrer" style="width:100%; height:80px; object-fit:cover; cursor:pointer;" onclick="showImageModal('${photoUrl}', event)">` : `<div style="width:100%; height:80px; background:#ccc; display:flex; justify-content:center; align-items:center; color:white;"><i class="fas fa-user fa-2x"></i></div>`;
             
             const card = document.createElement('div');
             card.className = 'fav-card terapis-card';
