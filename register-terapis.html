@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pendaftaran Mitra Terapis - Pijat Urut Bregas</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --primary: #00B14F;
+            --primary-hover: #009140;
+            --bg-gray: #F5F5F5;
+            --white: #FFFFFF;
+            --text-dark: #1a1a1a;
+            --text-mid: #555555;
+            --text-gray: #888888;
+            --border: #E8E8E8;
+            --radius-md: 10px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: #D5D5D5; display: flex; justify-content: center; height: 100vh; }
+        
+        .app-container {
+            width: 100%; max-width: 480px;
+            background-color: var(--white);
+            height: 100%; position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            display: flex; flex-direction: column;
+        }
+
+        @media (min-width: 481px) {
+            body { align-items: center; background: #e8f5e9; }
+            .app-container {
+                height: 90vh !important; max-height: 850px;
+                border-radius: 36px; border: 10px solid #1a1a1a;
+                box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); margin: 20px auto; overflow: hidden;
+            }
+            .auth-body::-webkit-scrollbar { width: 6px; }
+            .auth-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
+        }
+
+        .auth-header { text-align: center; padding: 30px 20px 10px; border-bottom: 1px solid var(--border); }
+        .auth-header h1 { font-size: 1.3rem; color: var(--text-dark); margin-bottom: 5px; }
+        .auth-header p { font-size: 0.85rem; color: var(--text-gray); }
+
+        .auth-body { padding: 20px; flex: 1; overflow-y: auto; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; font-weight: 600; color: var(--text-mid); }
+        .form-control {
+            width: 100%; padding: 12px 14px;
+            border: 1px solid var(--border); border-radius: var(--radius-md);
+            font-size: 0.95rem; background: var(--bg-gray); transition: all 0.2s;
+        }
+        .form-control:focus { outline: none; border-color: var(--primary); background: var(--white); }
+        
+        .file-input-wrapper {
+            background: #f8f9fa; border: 1px dashed #ccc; padding: 15px; text-align: center; border-radius: 8px; margin-bottom: 5px;
+        }
+
+        .btn {
+            width: 100%; padding: 16px; border: none; border-radius: var(--radius-md);
+            font-size: 1rem; font-weight: 700; cursor: pointer; text-align: center;
+            transition: background 0.2s; margin-top: 20px; margin-bottom: 20px;
+            background: var(--primary); color: var(--white);
+        }
+        .btn:active { background: var(--primary-hover); }
+
+        #alertMessage { padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 0.85rem; text-align: center; display: none; }
+        .alert-error { background: #FEE2E2; color: #DC2626; border: 1px solid #FCA5A5; }
+        .alert-success { background: #DCFCE7; color: #16A34A; border: 1px solid #86EFAC; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="auth-header">
+        <h1>Daftar Mitra Terapis</h1>
+        <p>Bergabunglah dan dapatkan pesanan setiap hari</p>
+    </div>
+
+    <div class="auth-body">
+        <div id="alertMessage"></div>
+
+        <div class="form-group">
+            <label>Nama Lengkap (Sesuai KTP)</label>
+            <input type="text" id="regName" class="form-control" placeholder="Contoh: Siti Aminah">
+        </div>
+        <div class="form-group">
+            <label>Nomor WhatsApp</label>
+            <input type="tel" id="regPhone" class="form-control" placeholder="Contoh: 08123456789">
+        </div>
+        <div class="form-group">
+            <label>Kata Sandi (Untuk Login)</label>
+            <input type="password" id="regPassword" class="form-control" placeholder="Minimal 6 karakter">
+        </div>
+        
+        <hr style="border: 0; border-top: 1px dashed var(--border); margin: 20px 0;">
+
+        <div class="form-group">
+            <label>Umur (Tahun)</label>
+            <input type="number" id="regUmur" class="form-control" placeholder="Contoh: 35">
+        </div>
+        <div class="form-group">
+            <label>Keahlian Pijat / Terapi</label>
+            <input type="text" id="regKeahlian" class="form-control" placeholder="Contoh: Pijat Urut, Bekam, Refleksi">
+        </div>
+        
+        <div class="form-group">
+            <label>Foto Wajah Diri (Profil)</label>
+            <div class="file-input-wrapper">
+                <input type="file" id="fotoFile" class="form-control" style="background:transparent; border:none; padding:0;">
+            </div>
+            <small style="color:var(--text-gray); font-size: 0.7rem;">Foto wajah yang jelas untuk ditampilkan di aplikasi.</small>
+        </div>
+
+        <div class="form-group">
+            <label>Foto KTP (Untuk Validasi Admin)</label>
+            <div class="file-input-wrapper">
+                <input type="file" id="ktpFile" class="form-control" style="background:transparent; border:none; padding:0;">
+            </div>
+            <small style="color:var(--text-gray); font-size: 0.7rem;">Data Anda aman dan hanya bisa dilihat oleh Admin.</small>
+        </div>
+
+        <button class="btn" onclick="daftarTerapis()" id="btnDaftar">Kirim Pendaftaran</button>
+
+        <div style="text-align: center; margin-bottom: 30px;">
+            <a href="login.html" style="font-size: 0.85rem; color: var(--text-mid); text-decoration: none;">&larr; Kembali ke halaman Login</a>
+        </div>
+    </div>
+</div>
+
+<script src="js/supabase.js?v=5"></script>
+<script>
+    function showAlert(message, isError = true) {
+        const alertEl = document.getElementById('alertMessage');
+        alertEl.textContent = message;
+        alertEl.style.display = 'block';
+        alertEl.className = isError ? 'alert-error' : 'alert-success';
+        if(isError) {
+            setTimeout(() => { alertEl.style.display = 'none'; }, 5000);
+            window.scrollTo(0,0);
+        }
+    }
+
+    // ================= COMPRESS IMAGE =================
+    function compressImage(file, maxWidth, maxHeight, quality) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = event => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = Math.round((width * maxHeight) / height);
+                            height = maxHeight;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    canvas.toBlob(blob => {
+                        if (!blob) return reject(new Error('Canvas is empty'));
+                        resolve(blob);
+                    }, file.type || 'image/jpeg', quality);
+                };
+                img.onerror = error => reject(error);
+            };
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    async function daftarTerapis() {
+        const name = document.getElementById('regName').value.trim();
+        const phone = document.getElementById('regPhone').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const umur = document.getElementById('regUmur').value.trim();
+        const keahlian = document.getElementById('regKeahlian').value.trim();
+        
+        const fotoFile = document.getElementById('fotoFile').files[0];
+        const ktpFile = document.getElementById('ktpFile').files[0];
+        const btn = document.getElementById('btnDaftar');
+
+        if (!name || !phone || !password || !umur || !keahlian) {
+            return showAlert("Semua text form wajib diisi!");
+        }
+        if (!fotoFile || !ktpFile) {
+            return showAlert("Anda harus mengupload Foto Profil dan Foto KTP!");
+        }
+        if (password.length < 6) {
+            return showAlert("Kata sandi minimal 6 karakter!");
+        }
+
+        const email = phone + '@jastip.app';
+
+        try {
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Memproses...`;
+            btn.disabled = true;
+
+            // 1. Register ke Supabase Auth
+            const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                email: email,
+                password: password,
+            });
+
+            if (authError) {
+                if (authError.message.includes("already registered")) {
+                    throw new Error("Nomor WA ini sudah pernah terdaftar di sistem.");
+                }
+                throw authError;
+            }
+
+            const userId = authData.user.id;
+
+            // 2. Compress & Upload Foto Profil
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Mengunggah Foto Profil...`;
+            const compressedFoto = await compressImage(fotoFile, 800, 800, 0.7);
+            const fotoExt = fotoFile.name.split('.').pop() || 'jpg';
+            const fotoPath = `terapis/${userId}-profil-${Math.random()}.${fotoExt}`;
+            
+            const { error: errUploadFoto } = await supabaseClient.storage.from('photos').upload(fotoPath, compressedFoto, { upsert: true });
+            if (errUploadFoto) throw new Error("Gagal upload Foto Profil: " + errUploadFoto.message);
+            const fotoUrl = supabaseClient.storage.from('photos').getPublicUrl(fotoPath).data.publicUrl;
+
+            // 3. Compress & Upload Foto KTP
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Mengunggah Foto KTP...`;
+            const compressedKtp = await compressImage(ktpFile, 1000, 1000, 0.7);
+            const ktpExt = ktpFile.name.split('.').pop() || 'jpg';
+            const ktpPath = `${userId}-ktp-${Math.random()}.${ktpExt}`;
+            
+            const { error: errUploadKtp } = await supabaseClient.storage.from('ktp').upload(ktpPath, compressedKtp, { upsert: true });
+            if (errUploadKtp) throw new Error("Gagal upload KTP. Pastikan admin sudah membuat bucket 'ktp' di Supabase. Error: " + errUploadKtp.message);
+            const ktpUrl = supabaseClient.storage.from('ktp').getPublicUrl(ktpPath).data.publicUrl;
+
+            // 4. Simpan ke database dengan role 'calon_mitra'
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Menyimpan Data...`;
+            const { error: dbError } = await supabaseClient.from('users_pijat').insert([{ 
+                id: userId, 
+                name: name, 
+                phone: phone, 
+                role: 'calon_mitra',
+                umur: umur,
+                keahlian: keahlian,
+                photo_url: fotoUrl,
+                ktp_url: ktpUrl,
+                saldo: 0
+            }]);
+
+            if (dbError) throw new Error("Gagal simpan ke database. Pastikan admin sudah menambah kolom tabel. Error: " + dbError.message);
+
+            showAlert("Pendaftaran Berhasil! Data Anda sedang diproses oleh Admin.", false);
+            btn.innerHTML = `<i class="fas fa-check"></i> Selesai`;
+            
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 3000);
+
+        } catch (error) {
+            showAlert(error.message);
+            btn.innerHTML = `Kirim Pendaftaran`;
+            btn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>
