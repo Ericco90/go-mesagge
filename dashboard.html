@@ -685,6 +685,18 @@
             if(data) data.forEach(u => {
                 let actionBtn = '';
                 if(u.role === 'pelanggan') actionBtn = `<button class="btn btn-success" onclick="ubahRole('${u.id}', 'mitra')">Jadikan Terapis</button>`;
+                
+                if(u.role === 'calon_mitra') {
+                    let detailHtml = `
+                        <div style="font-size: 0.75rem; background: #fff3cd; padding: 6px; border-radius: 5px; margin-bottom: 5px; border: 1px solid #ffeeba;">
+                            <b>Umur:</b> ${u.umur || '-'}<br>
+                            <b>Skill:</b> ${u.keahlian || '-'}<br>
+                            <a href="${u.ktp_url || '#'}" target="_blank" style="color: #0056b3; text-decoration: underline;">📄 Lihat KTP</a>
+                        </div>
+                    `;
+                    actionBtn = detailHtml + `<button class="btn btn-success" style="width: 100%; padding: 5px;" onclick="ubahRole('${u.id}', 'mitra')"><i class="fas fa-check"></i> Setujui Terapis</button>`;
+                }
+
                 if(u.role === 'mitra') {
                     actionBtn = `
                         <button class="btn btn-warning" style="color:white; margin-bottom: 5px;" onclick="bukaModalEditTerapis('${u.id}', '${(u.name||'').replace(/'/g, "\\'")}', '${u.phone||''}', '${u.photo_url||''}')"><i class="fas fa-edit"></i> Edit Profil</button>
@@ -710,7 +722,10 @@
                     photoHtml = dbPhotoUrl ? `<img src="${dbPhotoUrl}" referrerpolicy="no-referrer" onclick="bukaModalLihatFoto('${dbPhotoUrl}')" style="width:45px; height:45px; object-fit:cover; border-radius:50%; vertical-align:middle; margin-right:10px; cursor:pointer; border: 2px solid var(--primary); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="Klik untuk memperbesar">` : `<div style="width:45px; height:45px; border-radius:50%; background:#ccc; display:inline-block; vertical-align:middle; margin-right:10px; text-align:center; line-height:45px; color:white;"><i class="fas fa-user"></i></div>`;
                 }
                 
-                let roleDisplay = u.role === 'mitra' ? 'Terapis' : (u.role === 'pelanggan' ? 'Pelanggan' : 'Admin');
+                let roleDisplay = 'Pelanggan';
+                if(u.role === 'mitra') roleDisplay = 'Terapis Aktif';
+                else if(u.role === 'admin') roleDisplay = 'Admin';
+                else if(u.role === 'calon_mitra') roleDisplay = 'Menunggu Validasi';
                 tbody.innerHTML += `<tr><td>${photoHtml} ${u.name}</td><td>${saldoTxt}</td><td>${u.phone||'-'}</td><td><span class="badge ${u.role}">${roleDisplay}</span></td><td>${actionBtn}</td></tr>`;
             });
         }
