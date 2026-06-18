@@ -698,12 +698,13 @@
                 }
 
                 if(u.role === 'mitra') {
+                    let ktpHtml = u.ktp_url ? `<div style="font-size: 0.75rem; margin-bottom: 8px;"><a href="${u.ktp_url}" target="_blank" style="color: #0056b3; text-decoration: underline;">📄 Lihat KTP</a> | Umur: ${u.umur || '-'} | Skill: ${u.keahlian || '-'}</div>` : '';
+                    
                     actionBtn = `
-                        <button class="btn btn-warning" style="color:white; margin-bottom: 5px;" onclick="bukaModalEditTerapis('${u.id}', '${(u.name||'').replace(/'/g, "\\'")}', '${u.phone||''}', '${u.photo_url||''}')"><i class="fas fa-edit"></i> Edit Profil</button>
-                        <br>
-                        <button class="btn btn-primary" style="margin-bottom: 5px;" onclick="topupSaldo('${u.id}', ${u.saldo || 0})">Top-Up Saldo</button>
-                        <br>
-                        <button class="btn btn-danger" onclick="ubahRole('${u.id}', 'pelanggan')">Jadikan Pelanggan</button>
+                        ${ktpHtml}
+                        <button class="btn btn-warning" style="color:white; margin-bottom: 5px; width: 100%;" onclick="bukaModalEditTerapis('${u.id}', '${(u.name||'').replace(/'/g, "\\'")}', '${u.phone||''}', '${u.photo_url||''}')"><i class="fas fa-edit"></i> Edit Profil</button>
+                        <button class="btn btn-primary" style="margin-bottom: 5px; width: 100%;" onclick="topupSaldo('${u.id}', ${u.saldo || 0})">Top-Up Saldo</button>
+                        <button class="btn btn-danger" style="width: 100%;" onclick="ubahRole('${u.id}', 'pelanggan')">Jadikan Pelanggan</button>
                     `;
                 }
                 
