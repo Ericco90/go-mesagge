@@ -201,7 +201,8 @@
             </div>
             <div class="tarik-form-group">
                 <label>Pilih File Foto (Langsung dari HP/PC)</label>
-                <input type="file" id="editTerapisPhotoFile" accept="image/*" class="form-control" style="margin-bottom: 5px;">
+                <input type="file" id="editTerapisPhotoFile" accept="image/jpeg, image/png, image/jpg, image/webp" class="form-control" style="margin-bottom: 5px;" onchange="if(this.files && this.files.length > 0) { document.getElementById('fotoStatusText').innerText = '✅ Foto siap di-upload: ' + this.files[0].name; } else { document.getElementById('fotoStatusText').innerText = ''; }">
+                <small id="fotoStatusText" style="color: green; font-weight: bold; display: block; margin-bottom: 10px;"></small>
                 <label>Atau Link (URL) Foto Lama</label>
                 <input type="text" id="editTerapisPhoto" placeholder="https://contoh.com/foto.jpg">
             </div>
