@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Pijat Urut Bregas</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Supabase SDK (via CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --primary: #00B14F;      /* Hijau Grab */
+            --primary-hover: #009140;
+            --primary-light: #E5F7ED;
+            --bg-gray: #F5F5F5;
+            --white: #FFFFFF;
+            --text-dark: #1a1a1a;
+            --text-mid: #555555;
+            --text-gray: #888888;
+            --border: #E8E8E8;
+            --radius-md: 10px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: #D5D5D5;
+            display: flex; justify-content: center;
+            height: 100vh;
+        }
+
+        .app-container {
+            width: 100%; max-width: 480px;
+            background-color: var(--white);
+            height: 100%;
+            position: relative;
+            box-shadow: var(--shadow-md);
+            display: flex; flex-direction: column;
+        }
+
+        /* === DESKTOP / PC VIEW (PHONE MOCKUP) === */
+        @media (min-width: 481px) {
+            body {
+                align-items: center;
+                background: #e8f5e9;
+            }
+            .app-container {
+                height: 90vh !important;
+                max-height: 850px;
+                border-radius: 36px;
+                border: 10px solid #1a1a1a;
+                box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7), inset 0 0 0 2px #333;
+                margin: 20px auto; /* Force horizontal centering */
+                overflow: hidden;
+            }
+            
+            .auth-body { overflow-y: auto; }
+            .auth-body::-webkit-scrollbar { width: 6px; }
+            .auth-body::-webkit-scrollbar-track { background: transparent; }
+            .auth-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
+        }
+
+        .auth-header {
+            text-align: center;
+            padding: 40px 20px 20px;
+        }
+
+        .auth-header img {
+            width: 80px; height: 80px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .auth-header h1 {
+            font-size: 1.5rem; color: var(--text-dark);
+            margin-bottom: 8px;
+        }
+
+        .auth-header p {
+            font-size: 0.9rem; color: var(--text-gray);
+        }
+
+        .auth-body {
+            padding: 20px;
+            flex: 1;
+        }
+
+        .auth-tabs {
+            display: flex; gap: 10px;
+            margin-bottom: 24px;
+            background: var(--bg-gray);
+            padding: 4px; border-radius: var(--radius-md);
+        }
+
+        .auth-tab {
+            flex: 1; padding: 12px;
+            text-align: center; font-size: 0.9rem; font-weight: 600;
+            color: var(--text-gray); cursor: pointer;
+            border-radius: 8px; transition: all 0.3s;
+        }
+
+        .auth-tab.active {
+            background: var(--white); color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block; margin-bottom: 8px;
+            font-size: 0.85rem; font-weight: 500; color: var(--text-mid);
+        }
+
+        .form-control {
+            width: 100%; padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            background: var(--bg-gray);
+        }
+
+        .form-control:focus {
+            outline: none; border-color: var(--primary);
+            background: var(--white);
+            box-shadow: 0 0 0 3px rgba(238,77,45,0.1);
+        }
+
+        .btn {
+            width: 100%; padding: 16px;
+            border: none; border-radius: var(--radius-md);
+            font-size: 1rem; font-weight: 600;
+            cursor: pointer; text-align: center;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: var(--primary); color: var(--white);
+        }
+
+        .btn-primary:active { background: var(--primary-hover); }
+
+        .form-section { display: none; animation: fadeIn 0.3s; }
+        .form-section.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #alertMessage {
+            padding: 12px; border-radius: 8px; margin-bottom: 16px;
+            font-size: 0.85rem; text-align: center; display: none;
+        }
+        .alert-error { background: #FEE2E2; color: #DC2626; border: 1px solid #FCA5A5; }
+        .alert-success { background: #DCFCE7; color: #16A34A; border: 1px solid #86EFAC; }
+
+        /* Loader inside button */
+        .btn.loading { opacity: 0.7; pointer-events: none; }
+        .btn.loading .btn-text { display: none; }
+        .btn.loading::after {
+            content: ""; display: inline-block;
+            width: 20px; height: 20px;
+            border: 2px solid white;
+            border-top-color: transparent; border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="auth-header">
+        <img src="logo_pijat.png" alt="Logo Pijat Bregas">
+        <h1>Selamat Datang</h1>
+        <p>Masuk untuk memesan Layanan Pijat</p>
+    </div>
+
+    <div class="auth-body">
+        <div id="alertMessage"></div>
+
+        <div class="auth-tabs">
+            <div class="auth-tab active" onclick="switchTab('login')">Masuk</div>
+            <div class="auth-tab" onclick="switchTab('register')">Daftar</div>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginForm" class="form-section active">
+              <div class="form-group">
+                  <label>Nomor WhatsApp / HP</label>
+                  <input type="tel" id="loginEmail" class="form-control" placeholder="Contoh: 08123456789">
+              </div>
+            <div class="form-group">
+                <label>Kata Sandi</label>
+                <input type="password" id="loginPassword" class="form-control" placeholder="Masukkan kata sandi">
+            </div>
+            <button class="btn btn-primary" onclick="handleLogin()" id="btnLogin">
+                <span class="btn-text">Masuk</span>
+            </button>
+        </div>
+
+        <!-- Register Form -->
+        <div id="registerForm" class="form-section">
+            <div class="form-group">
+                <label>Nama Lengkap</label>
+                <input type="text" id="regName" class="form-control" placeholder="Contoh: Budi Santoso">
+            </div>
+              <div class="form-group">
+                  <label>No. WhatsApp / HP</label>
+                  <input type="tel" id="regPhone" class="form-control" placeholder="Contoh: 08123456789">
+              </div>
+              <div class="form-group">
+                  <label>Kata Sandi</label>
+                  <input type="password" id="regPassword" class="form-control" placeholder="Minimal 6 karakter">
+              </div>
+            <button class="btn btn-primary" onclick="handleRegister()" id="btnRegister">
+                <span class="btn-text">Daftar Sekarang</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="js/supabase.js?v=5"></script>
+<script src="js/auth.js?v=5"></script>
+
+<script>
+    function switchTab(tab) {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.form-section').forEach(f => f.classList.remove('active'));
+        
+        if (tab === 'login') {
+            document.querySelectorAll('.auth-tab')[0].classList.add('active');
+            document.getElementById('loginForm').classList.add('active');
+            document.querySelector('.auth-header p').textContent = 'Masuk untuk memesan Layanan Pijat';
+        } else {
+            document.querySelectorAll('.auth-tab')[1].classList.add('active');
+            document.getElementById('registerForm').classList.add('active');
+            document.querySelector('.auth-header p').textContent = 'Buat akun baru untuk mulai';
+        }
+    }
+
+    function showAlert(message, isError = true) {
+        const alertEl = document.getElementById('alertMessage');
+        alertEl.textContent = message;
+        alertEl.style.display = 'block';
+        alertEl.className = isError ? 'alert-error' : 'alert-success';
+        setTimeout(() => { alertEl.style.display = 'none'; }, 5000);
+    }
+</script>
+
+</body>
+</html>

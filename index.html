@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pijat Urut Bregas - Layanan Panggilan Brebes Tegal Slawi</title>
+    <meta name="description" content="Layanan pijat urut panggilan profesional area Brebes, Tegal & Slawi. Pijat capek, refleksi, dan bekam.">
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#059669">
+    <link rel="apple-touch-icon" href="logo.png">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Leaflet Maps API -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Supabase SDK (via CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --primary: #00B14F;      /* Hijau Grab */
+            --primary-hover: #009140;
+            --primary-light: #E5F7ED;
+            --bg-gray: #F5F5F5;
+            --white: #FFFFFF;
+            --text-dark: #1a1a1a;
+            --text-mid: #555555;
+            --text-gray: #888888;
+            --border: #E8E8E8;
+            --green: #D4AF37;        /* Gold Accent */
+            --green-light: #FEF9C3;  /* Light Gold */
+
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.1);
+
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background-color: #D5D5D5;
+            color: var(--text-dark);
+            display: flex;
+            justify-content: center;
+        }
+
+        /* === DARK MODE VARIABLES === */
+        body.dark-mode {
+            background-color: #121212;
+            --bg-gray: #1E1E1E;
+            --white: #2C2C2C;
+            --text-dark: #F5F5F5;
+            --text-mid: #CCCCCC;
+            --text-gray: #AAAAAA;
+            --border: #444444;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.6);
+        }
+        body.dark-mode .app-footer { background: #000000; }
+        body.dark-mode .form-control { background: #333333; color: #fff; }
+        body.dark-mode .qris-modal-content { background: #2C2C2C; }
+        body.dark-mode .bottom-nav { background: #2C2C2C; border-top: 1px solid #444; }
+        body.dark-mode .search-bar { background: #333; border: 1px solid #444 !important; }
+
+        /* === APP SHELL === */
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            background-color: var(--bg-gray);
+            height: 100vh;
+            height: 100dvh;
+            position: relative;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* === DESKTOP / PC VIEW (PHONE MOCKUP) === */
+        @media (min-width: 481px) {
+            body {
+                align-items: center;
+                background: linear-gradient(135deg, #2b3240 0%, #151821 100%);
+            }
+            .app-container {
+                height: 90vh !important;
+                max-height: 850px;
+                border-radius: 36px;
+                border: 10px solid #1a1a1a;
+                box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7), inset 0 0 0 2px #333;
+                margin: 20px auto; /* Force horizontal centering */
+            }
+            
+            /* Hide scrollbar for cleaner phone look */
+            .content-area::-webkit-scrollbar { width: 6px; }
+            .content-area::-webkit-scrollbar-track { background: transparent; }
+            .content-area::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
+        }
+
+        /* === LOADER === */
+        #loader {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--white);
+            z-index: 9999;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            gap: 12px;
+            transition: opacity 0.4s ease;
+        }
+        .spinner {
+            width: 36px; height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .loader-text { font-size: 0.8rem; color: var(--text-gray); }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* === HEADER === */
+        .app-header {
+            background: var(--white);
+            padding: 12px 15px;
+            padding-top: calc(12px + env(safe-area-inset-top, 0px));
+            position: sticky; top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .brand-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .brand-logo {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            object-fit: cover;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .brand-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+        .brand-name {
+            font-size: 0.85rem; font-weight: 700;
+            color: var(--primary);
+            line-height: 1.2;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .brand-tagline { font-size: 0.65rem; color: var(--text-gray); }
+
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.65rem; font-weight: 600;
+            flex-shrink: 0;
+        }
+        .status-badge.online { background: var(--green-light); color: var(--green); }
+        .status-badge.offline { background: #FEF2F2; color: #EF4444; }
+        .status-dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            animation: pulse-dot 1.5s ease-in-out infinite;
+        }
+        .status-badge.online .status-dot { background: var(--green); }
+        .status-badge.offline .status-dot { background: #EF4444; animation: none; }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.7); }
+        }
+
+        .search-bar {
+            background: var(--bg-gray);
+            border-radius: var(--radius-md);
+            display: flex; align-items: center;
+            padding: 9px 12px;
+        }
+        .search-bar i { color: var(--primary); margin-right: 10px; font-size: 0.85rem; }
+        .search-bar input {
+            border: none; background: none; outline: none;
+            width: 100%; font-size: 0.85rem; color: var(--text-dark);
+        }
+
+        /* === SCROLLABLE CONTENT === */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 75px;
+        }
+
+        /* === DARK MODE TOGGLE === */
+        .dark-toggle {
+            background: none; border: none;
+            color: var(--text-gray); font-size: 1.2rem;
+            cursor: pointer; margin-left: 8px;
+            transition: color 0.3s;
+        }
+        .dark-toggle:hover { color: var(--primary); }
+
+        /* === FAVORITE SLIDER & EXTRA SERVICES === */
+        .fav-slider {
+            display: flex; gap: 12px;
+            overflow-x: auto; scroll-snap-type: x mandatory;
+            padding-bottom: 10px; margin-top: 10px;
+        }
+        .fav-slider::-webkit-scrollbar { display: none; }
+        .fav-card {
+            min-width: 130px; background: var(--bg-gray);
+            border-radius: var(--radius-md); overflow: hidden;
+            scroll-snap-align: start; flex-shrink: 0;
+            border: 1px solid var(--border); cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .fav-card:active { border-color: var(--primary); }
+        .fav-img { width: 100%; height: 80px; object-fit: cover; }
+        .fav-info { padding: 8px; }
+        .fav-title { font-size: 0.75rem; font-weight: 700; color: var(--text-dark); margin-bottom: 2px; }
+        .fav-subtitle { font-size: 0.65rem; color: var(--text-gray); }
+
+        .extra-services {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+            padding: 0 15px 15px; background: var(--white); margin-bottom: 8px;
+        }
+        .extra-card {
+            background: var(--bg-gray); border: 1px solid var(--border);
+            border-radius: var(--radius-md); padding: 12px;
+            display: flex; align-items: center; gap: 10px; cursor: pointer;
+            text-decoration: none; color: var(--text-dark);
+        }
+        .extra-card i { font-size: 1.2rem; color: var(--primary); }
+        .extra-card span { font-size: 0.75rem; font-weight: 600; line-height: 1.2; }
+
+        /* === PROMO CODE & REVIEW BUTTON === */
+        .promo-container {
+            display: flex; gap: 8px; margin-bottom: 14px;
+        }
+        .btn-outline {
+            display: inline-block; padding: 10px 15px;
+            border: 1px solid var(--primary); border-radius: var(--radius-md);
+            color: var(--primary); font-size: 0.85rem; font-weight: 600;
+            text-align: center; cursor: pointer; text-decoration: none;
+            transition: all 0.2s; width: 100%; margin-top: 10px;
+        }
+        .btn-outline:active { background: var(--primary-light); }
+
+        /* === SERVICE TABS === */
+        .service-tabs {
+            display: flex; gap: 8px; margin-bottom: 20px;
+            background: var(--bg-gray); padding: 5px; border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+        }
+        .service-tab {
+            flex: 1; padding: 10px 5px; text-align: center;
+            font-size: 0.75rem; font-weight: 600; color: var(--text-gray);
+            border-radius: var(--radius-md); cursor: pointer;
+            transition: all 0.3s;
+        }
+        .service-tab.active {
+            background: var(--primary); color: #fff;
+            box-shadow: var(--shadow-sm);
+        }
+        .service-tab i { display: block; font-size: 1.2rem; margin-bottom: 4px; }
+
+        /* === FLEET SELECTION === */
+        .fleet-selection {
+            display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;
+        }
+        .fleet-card {
+            border: 2px solid var(--border); border-radius: var(--radius-md); padding: 10px;
+            text-align: center; cursor: pointer; transition: all 0.2s;
+            background: var(--bg-gray); color: var(--text-gray);
+        }
+        .fleet-card.active {
+            border-color: var(--primary); color: var(--primary); background: #e8f5e9;
+        }
+        body.dark-mode .fleet-card.active { background: #1a3320; }
+        .fleet-card i { font-size: 1.5rem; margin-bottom: 5px; }
+        .fleet-title { font-size: 0.8rem; font-weight: 700; }
+        .fleet-desc { font-size: 0.65rem; }
+
+        /* === ADMIN PROFILE === */
+        .admin-profile {
+            display: flex; align-items: center; gap: 15px;
+            background: var(--white); padding: 15px; border-radius: var(--radius-md);
+            margin: 15px; box-shadow: var(--shadow-sm); border: 1px solid var(--border);
+        }
+        .admin-img {
+            width: 70px; height: 70px; border-radius: 50%; object-fit: cover;
+            border: 2px solid var(--primary); padding: 2px; flex-shrink: 0;
+        }
+        .admin-info h3 { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); margin: 0 0 4px; display: flex; align-items: center; gap: 5px; }
+        .admin-info h3 i { color: #1DA1F2; font-size: 0.9rem; }
+        .admin-info p { font-size: 0.72rem; color: var(--text-gray); line-height: 1.4; margin: 0; }
+
+        /* === GALLERY === */
+        .gallery-title { font-size: 0.9rem; font-weight: 700; margin: 20px 15px 10px; color: var(--text-dark); }
+        .gallery-slider {
+            display: flex; gap: 10px; padding: 0 15px 15px; overflow-x: auto; scroll-snap-type: x mandatory;
+        }
+        .gallery-slider::-webkit-scrollbar { display: none; }
+        .gallery-item {
+            min-width: 160px; height: 160px; scroll-snap-align: start; flex-shrink: 0;
+            border-radius: var(--radius-md); overflow: hidden; position: relative;
+            box-shadow: var(--shadow-sm);
+        }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+        .gallery-caption {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.6); color: #fff; font-size: 0.7rem; padding: 6px; text-align: center;
+        }
+
+        /* === FLOATING WA === */
+        .floating-wa {
+            position: fixed; bottom: 80px; right: 20px; z-index: 99;
+            background: #25D366; color: white; width: 50px; height: 50px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; box-shadow: var(--shadow-md); transition: transform 0.2s;
+            text-decoration: none;
+        }
+        .floating-wa:active { transform: scale(0.9); }
+
+        /* === STATS BAR === */
+        .stats-bar {
+            display: flex;
+            background: var(--white);
+            padding: 16px 10px;
+            margin-bottom: 8px;
+            gap: 4px;
+        }
+        .stat-item {
+            flex: 1;
+            text-align: center;
+            border-right: 1px solid var(--border);
+        }
+        .stat-item:last-child { border-right: none; }
+        .stat-number {
+            font-size: 1.2rem; font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+        }
+        .stat-label {
+            font-size: 0.6rem; color: var(--text-gray);
+            margin-top: 3px; font-weight: 500;
+        }
+
+        /* === PROMO BANNERS === */
+        .promo-section {
+            padding: 12px 0 12px 15px;
+            background: var(--white);
+            margin-bottom: 8px;
+        }
+        .banner-container {
+            display: flex; gap: 10px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            padding-right: 15px;
+        }
+        .banner-container::-webkit-scrollbar { display: none; }
+        .banner {
+            min-width: 82%; height: 110px;
+            border-radius: var(--radius-md);
+            background: var(--primary);
+            color: var(--white);
+            scroll-snap-align: center;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 18px;
+            box-shadow: var(--shadow-sm);
+        }
+        .banner-text h3 { font-size: 1rem; margin-bottom: 4px; font-weight: 700; }
+        .banner-text p { font-size: 0.75rem; opacity: 0.9; }
+        .banner > i { font-size: 2.5rem; opacity: 0.25; }
+
+        /* === CATEGORIES === */
+        .categories {
+            background: var(--white);
+            padding: 18px 15px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px 8px;
+            margin-bottom: 8px;
+        }
+        .category-item {
+            display: flex; flex-direction: column; align-items: center;
+            text-decoration: none; color: var(--text-dark); gap: 6px;
+        }
+        .category-icon {
+            width: 44px; height: 44px;
+            background: var(--primary-light);
+            border-radius: 12px;
+            display: flex; justify-content: center; align-items: center;
+            color: var(--primary); font-size: 1.1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .category-item:active .category-icon { transform: scale(0.92); }
+        .category-item span { font-size: 0.7rem; text-align: center; font-weight: 500; }
+
+        /* === CARA KERJA === */
+        .how-it-works {
+            background: var(--white);
+            padding: 20px 15px;
+            margin-bottom: 8px;
+        }
+        .how-title {
+            font-size: 1rem; font-weight: 700;
+            margin-bottom: 16px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .how-title i { color: var(--primary); }
+        .steps-container {
+            display: flex; flex-direction: column; gap: 0;
+            position: relative;
+        }
+        .step {
+            display: flex; align-items: flex-start; gap: 12px;
+            position: relative;
+            padding-bottom: 20px;
+        }
+        .step:last-child { padding-bottom: 0; }
+        .step-icon {
+            width: 36px; height: 36px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            color: white; font-size: 0.8rem; font-weight: 700;
+            flex-shrink: 0;
+            z-index: 2;
+        }
+        .step::before {
+            content: '';
+            position: absolute;
+            left: 17px; top: 36px;
+            width: 2px;
+            height: calc(100% - 36px);
+            background: var(--border);
+            z-index: 1;
+        }
+        .step:last-child::before { display: none; }
+        .step-content h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 2px; }
+        .step-content p { font-size: 0.75rem; color: var(--text-gray); line-height: 1.4; }
+
+        /* === SECTION HEADERS === */
+        .section-header {
+            padding: 15px 15px 10px;
+            background: var(--white);
+            font-size: 1rem; font-weight: 700;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .section-header i { color: var(--primary); }
+
+        /* === FORMS === */
+        .app-section {
+            background: var(--white);
+            padding: 0 15px 20px;
+            margin-bottom: 8px;
+        }
+        .form-group { margin-bottom: 14px; }
+        .form-group label {
+            display: block; margin-bottom: 6px;
+            font-size: 0.8rem; color: var(--text-dark); font-weight: 700;
+        }
+        .form-control {
+            width: 100%; padding: 11px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.88rem;
+            background: var(--white);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(34,197,94,0.08);
+        }
+        textarea.form-control { resize: vertical; min-height: 80px; }
+
+        /* === AUTOCOMPLETE === */
+        .autocomplete-container { position: relative; }
+        .autocomplete-list {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-md);
+            max-height: 200px; overflow-y: auto;
+            z-index: 1005; list-style: none;
+            display: none;
+        }
+        .autocomplete-list li {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f5f5f5;
+            font-size: 0.82rem; cursor: pointer;
+            display: flex; align-items: flex-start; gap: 8px;
+            transition: background 0.15s;
+        }
+        .autocomplete-list li i { color: var(--text-gray); margin-top: 2px; }
+        .autocomplete-list li:hover { background: var(--primary-light); color: var(--primary); }
+        .autocomplete-list li:last-child { border-bottom: none; }
+        .autocomplete-list strong { color: var(--text-dark); font-weight: 600; }
+        .loading-text { padding: 10px; font-size: 0.82rem; color: var(--text-gray); text-align: center; }
+
+        /* === BUTTONS === */
+        .btn {
+            width: 100%; padding: 13px; border: none;
+            border-radius: var(--radius-md);
+            font-size: 0.95rem; font-weight: 600;
+            cursor: pointer; text-align: center;
+            display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+            transition: transform 0.1s, background 0.2s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: var(--primary); color: var(--white); }
+        .btn-primary:active { background: var(--primary-hover); }
+
+        /* === RESULT BOX === */
+        .result-box {
+            background: var(--primary-light);
+            border-radius: var(--radius-md);
+            padding: 15px; margin-top: 15px;
+            display: none;
+            border: 1px solid rgba(34,197,94,0.1);
+        }
+        .result-box h4 { font-size: 0.85rem; color: var(--text-gray); margin-bottom: 4px; }
+        .result-box .price { font-size: 1.5rem; color: var(--primary); font-weight: 800; }
+        .result-box .distance { font-size: 0.82rem; color: var(--text-dark); font-weight: 500; margin-top: 4px; }
+        #map {
+            height: 180px;
+            border-radius: var(--radius-sm);
+            margin-top: 10px; display: none;
+            z-index: 1;
+        }
+
+        /* === TESTIMONIALS === */
+        .testimonials {
+            background: var(--white);
+            padding: 20px 15px;
+            margin-bottom: 8px;
+        }
+        .testi-title {
+            font-size: 1rem; font-weight: 700;
+            margin-bottom: 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .testi-title i { color: var(--primary); }
+        .testi-scroll {
+            display: flex; gap: 10px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            padding-bottom: 4px;
+        }
+        .testi-scroll::-webkit-scrollbar { display: none; }
+        .testi-card {
+            min-width: 78%;
+            background: var(--bg-gray);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            scroll-snap-align: start;
+        }
+        .testi-header {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 8px;
+        }
+        .testi-avatar {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex; justify-content: center; align-items: center;
+            color: white; font-weight: 700; font-size: 0.8rem;
+        }
+        .testi-name { font-size: 0.8rem; font-weight: 600; }
+        .testi-loc { font-size: 0.65rem; color: var(--text-gray); }
+        .testi-stars { color: #FBBF24; font-size: 0.7rem; margin-bottom: 6px; }
+        .testi-text { font-size: 0.78rem; color: var(--text-mid); line-height: 1.5; }
+
+        /* === PAYMENT METHODS === */
+        .payment-section {
+            background: var(--white);
+            padding: 20px 15px;
+            margin-bottom: 8px;
+        }
+        .payment-title {
+            font-size: 1rem; font-weight: 700;
+            margin-bottom: 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .payment-title i { color: var(--primary); }
+        .payment-methods {
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .pay-card {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .pay-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(34,197,94,0.08);
+        }
+        .pay-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .pay-icon.cash { background: #FEF3C7; color: #D97706; }
+        .pay-icon.dana { background: #DBEAFE; color: #2563EB; }
+        .pay-icon.qris { background: #EDE9FE; color: #7C3AED; }
+        .pay-info { flex: 1; min-width: 0; }
+        .pay-name { font-size: 0.82rem; font-weight: 600; }
+        .pay-detail { font-size: 0.72rem; color: var(--text-gray); margin-top: 1px; }
+        .pay-number {
+            font-size: 0.85rem; font-weight: 700;
+            color: var(--text-dark);
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+        .pay-action {
+            flex-shrink: 0;
+        }
+        .btn-small {
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            background: var(--bg-gray);
+            font-size: 0.7rem; font-weight: 600;
+            color: var(--text-mid);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 4px;
+        }
+        .btn-small:active { transform: scale(0.95); }
+        .btn-small.copied {
+            background: var(--green-light);
+            color: var(--green);
+            border-color: var(--green);
+        }
+
+        /* QRIS Modal */
+        .qris-modal {
+            display: none;
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 9998;
+            justify-content: center; align-items: center;
+            animation: fadeIn 0.2s ease;
+        }
+        .qris-modal.show { display: flex; }
+        .qris-modal-content {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            max-width: 320px; width: 90%;
+            text-align: center;
+            position: relative;
+            animation: slideUp 0.3s ease;
+        }
+        .qris-modal-content img {
+            width: 100%; max-width: 260px;
+            border-radius: var(--radius-sm);
+            margin: 12px auto;
+            display: block;
+        }
+        .qris-modal-title {
+            font-size: 0.95rem; font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .qris-modal-sub {
+            font-size: 0.75rem; color: var(--text-gray);
+        }
+        .qris-close {
+            position: absolute; top: 12px; right: 14px;
+            background: none; border: none;
+            font-size: 1.2rem; color: var(--text-gray);
+            cursor: pointer;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* === FAQ === */
+        .faq-section {
+            background: var(--white);
+            padding: 20px 15px;
+            margin-bottom: 8px;
+        }
+        .faq-title {
+            font-size: 1rem; font-weight: 700;
+            margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .faq-title i { color: var(--primary); }
+        .faq-item {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+        .faq-item:last-child { margin-bottom: 0; }
+        .faq-question {
+            padding: 12px 14px;
+            font-size: 0.82rem; font-weight: 600;
+            cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-gray);
+            transition: background 0.2s;
+        }
+        .faq-question:hover { background: var(--primary-light); }
+        .faq-question i {
+            font-size: 0.7rem; color: var(--text-gray);
+            transition: transform 0.3s;
+        }
+        .faq-item.open .faq-question i { transform: rotate(180deg); }
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .faq-answer-inner {
+            padding: 12px 14px;
+            font-size: 0.78rem; color: var(--text-mid);
+            line-height: 1.6;
+        }
+        .faq-item.open .faq-answer { max-height: 200px; }
+
+        /* === FOOTER === */
+        .app-footer {
+            background: var(--text-dark);
+            color: rgba(255,255,255,0.95);
+            padding: 30px 20px;
+            margin-bottom: 0;
+        }
+        .footer-brand {
+            font-size: 1rem; font-weight: 700;
+            color: var(--white); margin-bottom: 8px;
+        }
+        .footer-desc { font-size: 0.8rem; line-height: 1.6; margin-bottom: 16px; color: rgba(255,255,255,0.85); }
+        .footer-row {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 10px; font-size: 0.8rem;
+            color: rgba(255,255,255,0.95);
+        }
+        .footer-row i { color: var(--primary); width: 16px; text-align: center; }
+        .footer-divider {
+            border: none; border-top: 1px solid rgba(255,255,255,0.15);
+            margin: 20px 0;
+        }
+        .footer-social {
+            display: flex; gap: 12px;
+            margin-bottom: 16px;
+        }
+        .footer-social a {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            display: flex; justify-content: center; align-items: center;
+            color: var(--white);
+            text-decoration: none; font-size: 0.9rem;
+            transition: background 0.2s, color 0.2s;
+        }
+        .footer-social a:hover { background: var(--primary); color: var(--white); }
+        .footer-copy { font-size: 0.75rem; text-align: center; opacity: 0.8; color: var(--white); }
+
+        /* === BOTTOM NAV === */
+        .bottom-nav {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: var(--white);
+            display: flex; justify-content: space-around;
+            padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+            box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+            z-index: 1001;
+        }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center;
+            text-decoration: none; color: var(--text-gray);
+            gap: 3px; width: 33.33%;
+            transition: color 0.2s;
+        }
+        .nav-item i { font-size: 1.15rem; }
+        .nav-item span { font-size: 0.6rem; font-weight: 500; }
+        .nav-item.active { color: var(--primary); }
+
+        /* === TOAST === */
+        #toast {
+            visibility: hidden; min-width: 200px;
+            background: rgba(0,0,0,0.85); color: #fff;
+            text-align: center; border-radius: 24px;
+            padding: 11px 20px;
+            position: absolute; z-index: 1002;
+            left: 50%; bottom: 80px;
+            transform: translateX(-50%);
+            font-size: 0.8rem; font-weight: 500;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        #toast.show { visibility: visible; opacity: 1; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+
+    <div class="loader-container" id="appLoader">
+        <div class="loader-icon"><i class="fas fa-motorcycle"></i></div>
+        <span class="loader-text">Memuat JatiGo...</span>
+    </div>
+
+    <!-- Header -->
+    <header class="app-header">
+        <div class="brand-bar">
+            <div class="header-content" style="display: flex; align-items: center; gap: 10px;">
+                <img src="logo_pijat.png" alt="Logo" class="brand-logo" onerror="this.style.display='none'">
+                <div class="brand-name" style="display: flex; flex-direction: column; line-height: 1.1;">
+                    Pijat Urut Bregas
+                    <span style="font-size: 0.6rem; font-weight: normal; color: var(--text-gray);">Panggilan Brebes Tegal Slawi</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-left: auto;">
+                <div class="status-badge online" id="statusBadge">
+                    <div class="status-dot"></div>
+                    <span id="statusText">Buka</span>
+                </div>
+                <button class="dark-toggle" id="darkModeToggle" title="Toggle Dark Mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Scrollable Content -->
+    <div class="content-area">
+
+        <!-- Stats Bar -->
+        <div class="stats-bar" id="beranda">
+            <div class="stat-item">
+                <div class="stat-number" id="statOrders">0</div>
+                <div class="stat-label">Pesanan Selesai</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="statCustomers">0</div>
+                <div class="stat-label">Pelanggan Puas</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="statAreas">0</div>
+                <div class="stat-label">Desa Terjangkau</div>
+            </div>
+        </div>
+
+        <!-- Promo Banners -->
+        <div class="promo-section">
+            <div class="banner-container">
+                <div class="banner">
+                    <div class="banner-text">
+                        <h3>Terapis Berpengalaman</h3>
+                        <p>Pijat capek & refleksi profesional</p>
+                    </div>
+                    <i class="fas fa-spa"></i>
+                </div>
+                <div class="banner" style="background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);">
+                    <div class="banner-text">
+                        <h3>Panggilan ke Rumah</h3>
+                        <p>Tanpa perlu repot keluar rumah</p>
+                    </div>
+                    <i class="fas fa-home"></i>
+                </div>
+                <div class="banner" style="background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);">
+                    <div class="banner-text">
+                        <h3>Layanan Bekam</h3>
+                        <p>Terapi kesehatan sunnah</p>
+                    </div>
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="categories">
+            <a href="#pesan" class="category-item" onclick="setService('pijat1')">
+                <div class="category-icon"><i class="fas fa-clock"></i></div>
+                <span>Pijat 1 Jam</span>
+            </a>
+            <a href="#pesan" class="category-item" onclick="setService('pijat15')">
+                <div class="category-icon"><i class="fas fa-hourglass-half"></i></div>
+                <span>Pijat 1.5 Jam</span>
+            </a>
+            <a href="#pesan" class="category-item" onclick="setService('pijat2')">
+                <div class="category-icon"><i class="fas fa-hourglass-end"></i></div>
+                <span>Pijat 2 Jam</span>
+            </a>
+            <a href="#pesan" class="category-item" onclick="setService('bekam')">
+                <div class="category-icon"><i class="fas fa-heartbeat"></i></div>
+                <span>Bekam</span>
+            </a>
+        </div>
+
+        <!-- Cara Kerja -->
+        <div class="how-it-works">
+            <div class="how-title"><i class="fas fa-list-ol"></i> Cara Kerja</div>
+            <div class="steps-container">
+                <div class="step">
+                    <div class="step-icon">1</div>
+                    <div class="step-content">
+                        <h4>Pilih Layanan</h4>
+                        <p>Pilih durasi pijat atau terapi bekam di form pemesanan.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-icon">2</div>
+                    <div class="step-content">
+                        <h4>Tentukan Lokasi</h4>
+                        <p>Masukkan alamat rumah lengkap Anda di Brebes, Tegal, atau Slawi.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-icon">3</div>
+                    <div class="step-content">
+                        <h4>Terapis Menuju Lokasi</h4>
+                        <p>Terapis profesional kami akan segera datang ke rumah Anda.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-icon">4</div>
+                    <div class="step-content">
+                        <h4>Nikmati Pijatan</h4>
+                        <p>Badan kembali bugar. Pembayaran bisa dilakukan setelah selesai!</p>
+                    </div>
+                </div>
+            </div>
+            <div class="how-step" style="margin-top: 15px; display: flex; align-items: center; gap: 10px; background: var(--primary-light); padding: 10px; border-radius: var(--radius-md);">
+                <div class="how-icon"><i class="fas fa-check-circle" style="color: var(--primary); font-size: 1.5rem;"></i></div>
+                <div class="how-text" style="font-size: 0.8rem; font-weight: 600; color: var(--primary);">Tunggu di rumah, kami yang datang untuk kebugaran Anda!</div>
+            </div>
+        </div>
+
+        <!-- Rekomendasi Toko / Pilihan Favorit -->
+        <div class="section-header">
+            <i class="fas fa-heart"></i> Pilihan Favorit
+        </div>
+        <div class="app-section" style="padding-bottom:10px;">
+            <div class="fav-slider">
+                <div class="fav-card" onclick="setService('75000'); document.getElementById('pesan').scrollIntoView();">
+                    <div style="background:var(--primary-light); height:80px; display:flex; justify-content:center; align-items:center; color:var(--primary); font-size:2rem;"><i class="fas fa-spa"></i></div>
+                    <div class="fav-info">
+                        <div class="fav-title">Pijat Capek</div>
+                        <div class="fav-subtitle">1 Jam - Rp 75.000</div>
+                    </div>
+                </div>
+                <div class="fav-card" onclick="setService('150000_bekam'); document.getElementById('pesan').scrollIntoView();">
+                    <div style="background:var(--primary-light); height:80px; display:flex; justify-content:center; align-items:center; color:var(--primary); font-size:2rem;"><i class="fas fa-heartbeat"></i></div>
+                    <div class="fav-info">
+                        <div class="fav-title">Terapi Bekam</div>
+                        <div class="fav-subtitle">Panggilan - Rp 150.000</div>
+                    </div>
+                </div>
+                <div class="fav-card" onclick="setService('100000'); document.getElementById('pesan').scrollIntoView();">
+                    <div style="background:var(--primary-light); height:80px; display:flex; justify-content:center; align-items:center; color:var(--primary); font-size:2rem;"><i class="fas fa-yin-yang"></i></div>
+                    <div class="fav-info">
+                        <div class="fav-title">Pijat Refleksi</div>
+                        <div class="fav-subtitle">1.5 Jam - Rp 100.000</div>
+                    </div>
+                </div>
+            </div>
+            <p style="font-size:0.65rem; color:var(--text-gray); text-align:center; margin-top:5px;">Klik untuk langsung pesan</p>
+        </div>
+
+        <!-- PILIH TERAPIS (BARU) -->
+        <div class="section-header">
+            <i class="fas fa-users"></i> Pilih Terapis Anda (Opsional)
+        </div>
+        <div class="app-section" style="padding-bottom:10px;">
+            <div class="fav-slider" id="terapisSlider">
+                <!-- Terapis akan di-load di sini via JS -->
+                <div style="font-size: 0.8rem; color: var(--text-gray); padding: 10px;">Memuat daftar terapis...</div>
+            </div>
+            <p style="font-size:0.65rem; color:var(--text-gray); text-align:center; margin-top:5px;">Klik untuk memilih terapis langganan Anda</p>
+            <input type="hidden" id="selectedTerapisId" value="">
+            <input type="hidden" id="selectedTerapisName" value="">
+        </div>
+
+        <!-- ORDER FORM -->
+        <div class="section-header" id="pesan">
+            <i class="fas fa-calendar-check"></i> Form Panggilan Terapis
+        </div>
+        <div class="app-section form-section">
+            <form id="orderForm">
+                <div class="form-group">
+                    <label>Pilih Layanan & Durasi</label>
+                    <select id="orderServiceType" class="form-control" onchange="updateServicePrice()">
+                        <option value="75000">Pijat Urut 1 Jam - Rp 75.000</option>
+                        <option value="100000">Pijat Urut 1.5 Jam - Rp 100.000</option>
+                        <option value="150000">Pijat Urut 2 Jam - Rp 150.000</option>
+                        <option value="150000_bekam">Bekam - Rp 150.000</option>
+                    </select>
+                </div>
+
+                <div class="form-group autocomplete-container">
+                    <label id="lblDropoffCity">Lokasi Anda (Desa / Kecamatan)</label>
+                    <div class="search-bar" style="background: var(--white); border: 1px solid var(--border);">
+                        <i class="fas fa-map-marker-alt" style="color:var(--primary);"></i>
+                        <input type="text" id="orderTujuan" class="form-control" style="border:none;padding:0;" placeholder="Ketik nama desa/kecamatan..." autocomplete="off" required>
+                    </div>
+                    <ul class="autocomplete-list" id="tujuanList"></ul>
+                </div>
+                <div class="form-group" style="margin-top:-5px;">
+                    <label id="lblDropoffDetail">Alamat Lengkap (Patokan)</label>
+                    <input type="text" id="orderTujuanDetail" class="form-control" placeholder="Contoh: Jl. Mawar No.5, RT 03/RW 01, cat rumah hijau..." required>
+                </div>
+
+                <div class="result-box" id="resultBox" style="margin-bottom:20px; display:block;">
+                    <h4 id="calcStatus">Total Biaya Pijat/Terapi</h4>
+                    <div class="price" id="totalOngkir">Rp 75.000</div>
+                    <p id="priceInfo" style="font-size:0.72rem;color:var(--text-gray);margin-top:5px;margin-bottom:10px;">*Harga sudah termasuk biaya transportasi Terapis.</p>
+                    <div id="map" style="display:none; height:150px; border-radius:8px; margin-top:10px;"></div>
+                </div>
+
+                <hr style="border-top:1px dashed var(--border);margin:20px 0;">
+
+                <div class="form-group">
+                    <label>Nama Anda</label>
+                    <input type="text" id="orderNama" class="form-control" placeholder="Masukkan nama..." required>
+                </div>
+                <div class="form-group">
+                    <label>Nomor WhatsApp</label>
+                    <input type="tel" id="orderWa" class="form-control" placeholder="0812xxxx..." required>
+                </div>
+                <div class="form-group">
+                    <label id="lblCatatan">Keluhan / Catatan</label>
+                    <textarea id="orderCatatan" class="form-control" placeholder="Contoh: Pegal di bagian bahu dan pinggang..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Punya Kode Promo?</label>
+                    <div class="promo-container">
+                        <input type="text" id="orderPromo" class="form-control" placeholder="Masukkan kode (opsional)" style="text-transform: uppercase;">
+                        <button type="button" class="btn btn-primary" style="width:auto; padding:0 20px;" onclick="applyPromo()">Gunakan</button>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 15px; margin-bottom: 20px;">
+                    <label>Metode Pembayaran</label>
+                    <select id="orderPaymentMethod" class="form-control">
+                        <option value="Tunai">Tunai / COD</option>
+                        <option value="QRIS">QRIS / E-Wallet</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="btnSubmit">
+                    <i class="fas fa-paper-plane"></i> Pesan Sekarang
+                </button>
+            </form>
+        </div>
+
+        <!-- Testimonials -->
+        <div class="testimonials">
+            <div class="testi-title"><i class="fas fa-star"></i> Apa Kata Mereka</div>
+            <div class="testi-scroll">
+                <div class="testi-card">
+                    <div class="testi-header">
+                        <div class="testi-avatar">A</div>
+                        <div>
+                            <div class="testi-name">Aisyah R.</div>
+                            <div class="testi-loc">Slawi, Tegal</div>
+                        </div>
+                    </div>
+                    <div class="testi-stars">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <div class="testi-text">"Pijatannya mantap, badan langsung enteng. Terapisnya juga ramah dan profesional. Sangat recommended buat yang capek pulang kerja!"</div>
+                </div>
+                <div class="testi-card">
+                    <div class="testi-header">
+                        <div class="testi-avatar">B</div>
+                        <div>
+                            <div class="testi-name">Budi S.</div>
+                            <div class="testi-loc">Adiwerna, Tegal</div>
+                        </div>
+                    </div>
+                    <div class="testi-stars">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-stroke"></i>
+                    </div>
+                    <div class="testi-text">"Sering manggil buat pijat refleksi sekalian bekam. Prosesnya higienis, tepat waktu. Mantap lah pokoknya."</div>
+                </div>
+                <div class="testi-card">
+                    <div class="testi-header">
+                        <div class="testi-avatar">D</div>
+                        <div>
+                            <div class="testi-name">Dewi M.</div>
+                            <div class="testi-loc">Dukuhturi, Tegal</div>
+                        </div>
+                    </div>
+                    <div class="testi-stars">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </div>
+                    <div class="testi-text">"Enak banget nggak perlu repot keluar rumah. Terapis datang tepat waktu, pijatannya pas sesuai request. Bakal langganan!"</div>
+                </div>
+            </div>
+            <a href="https://wa.me/628995882032?text=Halo%20Min,%20saya%20mau%20kasih%20ulasan%20nih:%0A%0A[Tulis Ulasan & Rating]..." class="btn-outline" target="_blank" style="margin: 10px 15px; width: calc(100% - 30px);">
+                <i class="fas fa-pen"></i> Tulis Ulasan Kamu
+            </a>
+        </div>
+
+        <!-- Gallery -->
+        <div class="gallery-title"><i class="fas fa-camera"></i> Bukti Pelayanan Kami</div>
+        <div class="gallery-slider">
+            <div class="gallery-item">
+                <img src="pijat_terapis.jpg" alt="Terapis" onerror="this.src='gallery-jastip.png'">
+                <div class="gallery-caption">Terapis Profesional</div>
+            </div>
+            <div class="gallery-item">
+                <img src="pijat_tradisional.jpg" alt="Pijat" onerror="this.src='gallery-antar.png'">
+                <div class="gallery-caption">Pijat Tradisional</div>
+            </div>
+            <div class="gallery-item">
+                <img src="terapi_bekam.jpg" alt="Bekam" onerror="this.src='gallery-ojeg.png'">
+                <div class="gallery-caption">Terapi Bekam</div>
+            </div>
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="payment-section">
+            <div class="payment-title"><i class="fas fa-wallet"></i> Metode Pembayaran</div>
+            <div class="payment-methods">
+                <div class="pay-card">
+                    <div class="pay-icon cash"><i class="fas fa-money-bill-wave"></i></div>
+                    <div class="pay-info">
+                        <div class="pay-name">Cash / COD</div>
+                        <div class="pay-detail">Bayar langsung saat barang diterima</div>
+                    </div>
+                    <div class="pay-action">
+                        <span style="font-size:0.7rem;color:var(--green);font-weight:600;"><i class="fas fa-check-circle"></i> Tersedia</span>
+                    </div>
+                </div>
+                <div class="pay-card">
+                    <div class="pay-icon dana"><i class="fas fa-wallet"></i></div>
+                    <div class="pay-info">
+                        <div class="pay-name">DANA</div>
+                        <div class="pay-number">0899-588-2032</div>
+                        <div class="pay-detail">a.n. Januri</div>
+                    </div>
+                    <div class="pay-action">
+                        <button class="btn-small" onclick="copyDana(this)">
+                            <i class="fas fa-copy"></i> Salin
+                        </button>
+                    </div>
+                </div>
+                <div class="pay-card">
+                    <div class="pay-icon qris"><i class="fas fa-qrcode"></i></div>
+                    <div class="pay-info">
+                        <div class="pay-name">QRIS</div>
+                        <div class="pay-detail">Scan dari semua e-wallet &amp; m-banking</div>
+                    </div>
+                    <div class="pay-action">
+                        <button class="btn-small" onclick="showQris()">
+                            <i class="fas fa-eye"></i> Lihat
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QRIS Modal -->
+        <div class="qris-modal" id="qrisModal" onclick="closeQris(event)">
+            <div class="qris-modal-content" style="padding: 20px; text-align: center;">
+                <button class="qris-close" onclick="closeQris()">&times;</button>
+                <h3 style="margin-bottom: 15px; color: var(--primary);">Scan QRIS</h3>
+                <img src="qris.png" alt="QRIS JatiGo" style="margin: 0 auto 10px auto;">
+                <p style="font-size: 0.9rem; color: var(--text-gray);">Pembayaran aman dan praktis via e-Wallet/M-Banking</p>
+                <a id="qrisWaButton" href="#" class="btn btn-primary" target="_blank" onclick="closeQris()"><i class="fab fa-whatsapp"></i> Kirim Bukti ke Admin</a>
+            </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="faq-section">
+            <div class="faq-title"><i class="fas fa-circle-question"></i> Pertanyaan Umum (FAQ)</div>
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    <span>Jam operasional layanan ini kapan?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">Kami melayani setiap hari mulai pukul <strong>08.00 - 22.00 WIB</strong>. Panggilan di luar jam tersebut bisa dikoordinasikan lebih dulu via WA.</div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    <span>Berapa biaya transportasinya?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">Biaya kedatangan terapis mulai dari <strong>Rp10.000</strong> (0-3 KM pertama), dan tambahan Rp2.500 per KM berikutnya. Total estimasi biaya langsung terlihat di form pesanan!</div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    <span>Pembayarannya bagaimana?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">Bisa bayar <strong>Cash</strong> setelah selesai dipijat, transfer <strong>DANA</strong>, atau scan <strong>QRIS</strong> dari e-wallet / M-Banking Anda. Praktis!</div>
+                </div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">
+                    <span>Area mana saja yang dilayani?</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">
+                    <div class="faq-answer-inner">Saat ini kami melayani area <strong>Brebes, Tegal, dan Slawi (Bregas)</strong>. Terapis kami siap datang ke rumah, kos, atau hotel Anda.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="app-footer">
+            <div class="footer-brand">Pijat Urut Bregas</div>
+            <div class="footer-links">Layanan pijat urut dan bekam panggilan profesional area Brebes, Tegal &amp; Slawi. Badan bugar tanpa keluar rumah.</div>
+
+            <div class="footer-row"><i class="fas fa-clock"></i> Buka: 08.00 - 22.00 WIB (Setiap Hari)</div>
+            <div class="footer-row"><i class="fas fa-map-marker-alt"></i> Brebes, Tegal, Slawi</div>
+            <div class="footer-row"><i class="fab fa-whatsapp"></i> 0899-588-2032</div>
+
+            <hr class="footer-divider">
+            <div class="footer-social">
+                <a href="https://wa.me/628995882032" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
+                <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+            </div>
+            <div class="footer-copy">&copy; 2026 Pijat Urut Bregas. All rights reserved.</div>
+        </div>
+
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav">
+        <a href="#beranda" class="nav-item active" onclick="setActiveNav(this)">
+            <i class="fas fa-home"></i><span>Beranda</span>
+        </a>
+        <a href="#pesan" class="nav-item" onclick="setActiveNav(this)">
+            <i class="fas fa-hand-sparkles"></i><span>Panggil</span>
+        </a>
+        <a href="login.html" class="nav-item" id="navProfilLink">
+            <i class="fas fa-sign-in-alt"></i><span id="navProfilText">Masuk</span>
+        </a>
+    </div>
+
+    <div id="toast">Memproses...</div>
+</div>
+
+<!-- JAVASCRIPT -->
+<script src="desa-data.js"></script>
+<script>
+    // === LOADER ===
+    window.addEventListener('load', () => {
+        const loader = document.getElementById('loader');
+        if(loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 400);
+        }
+    });
+
+    // Cek sesi login
+    let currentUser = null;
+    async function checkSession() {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+            const { data: user } = await supabaseClient.from('users_pijat').select('name, role').eq('id', session.user.id).single();
+            if (user) {
+                currentUser = user;
+                document.getElementById('navProfilText').textContent = "Dashboard (" + user.role + ")";
+            }
+        }
+    }
+    checkSession();
+
+    function setActiveNav(el) {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    // === TOAST ===
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'show';
+        setTimeout(() => t.className = '', 3000);
+    }
+
+    // === STATUS CHECK (by hour) ===
+    function updateStatus() {
+        const hour = new Date().getHours();
+        const badge = document.getElementById('statusBadge');
+        const text = document.getElementById('statusText');
+        if (hour >= 7 && hour < 21) {
+            badge.className = 'status-badge online';
+            text.textContent = 'Buka';
+        } else {
+            badge.className = 'status-badge offline';
+            text.textContent = 'Tutup';
+        }
+    }
+    updateStatus();
+    setInterval(updateStatus, 60000);
+
+    // === ANIMATED COUNTER ===
+    function animateCounter(el, target, duration) {
+        let start = 0;
+        const step = Math.ceil(target / (duration / 16));
+        const timer = setInterval(() => {
+            start += step;
+            if (start >= target) { start = target; clearInterval(timer); }
+            el.textContent = start.toLocaleString('id-ID');
+        }, 16);
+    }
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                animateCounter(document.getElementById('statOrders'), 1250, 1200);
+                animateCounter(document.getElementById('statCustomers'), 480, 1200);
+                animateCounter(document.getElementById('statAreas'), 35, 800);
+                observer.disconnect();
+            }
+        });
+    });
+    observer.observe(document.querySelector('.stats-bar'));
+
+    // === FAQ TOGGLE ===
+    function toggleFaq(el) {
+        const item = el.parentElement;
+        item.classList.toggle('open');
+    }
+
+    // === MAPS & CALC ===
+    let map, marker;
+    let state = { dropoff: {name:'', lat:null, lon:null, displayName:''}, ongkir: 75000, currentServiceText: 'Pijat Urut 1 Jam - Rp 75.000', basePrice: 75000 };
+
+    function selectLocation(item, type, list, displayName) {
+        document.getElementById('orderTujuan').value = displayName;
+        state.dropoff = { name: item.name, lat: item.lat, lon: item.lon, displayName: displayName };
+        list.style.display = 'none';
+        
+        // Tampilkan peta titik lokasi pasien
+        showLocationMap(item.lat, item.lon);
+    }
+    
+    function showLocationMap(lat, lon) {
+        const md = document.getElementById('map'); 
+        md.style.display = 'block';
+        
+        if (!map) { 
+            map = L.map('map', { zoomControl: false }).setView([lat, lon], 15); 
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }).addTo(map); 
+        } else {
+            map.setView([lat, lon], 15);
+        }
+        
+        setTimeout(() => {
+            map.invalidateSize();
+            if (marker) map.removeLayer(marker);
+            marker = L.marker([lat, lon]).addTo(map);
+        }, 100);
+    }
+
+    function setService(priceValue) {
+        document.getElementById('orderServiceType').value = priceValue;
+        updateServicePrice();
+    }
+    
+    function updateServicePrice() {
+        const select = document.getElementById('orderServiceType');
+        let priceValue = select.value;
+        if (priceValue.includes('_')) priceValue = priceValue.split('_')[0];
+        
+        state.basePrice = parseInt(priceValue) || 0;
+        state.ongkir = state.basePrice;
+        state.currentServiceText = select.options[select.selectedIndex].text;
+        
+        const fmt = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 });
+        document.getElementById('totalOngkir').textContent = fmt.format(state.ongkir);
+    }
+
+    // 3. Load Terapis
+    async function loadTerapisDiBeranda() {
+        const { data: terapis } = await supabaseClient.from('users_pijat').select('*').eq('role', 'mitra');
+        const slider = document.getElementById('terapisSlider');
+        slider.innerHTML = '';
+        
+        if (!terapis || terapis.length === 0) {
+            slider.innerHTML = '<div style="font-size: 0.8rem; color: var(--text-gray); padding: 10px;">Belum ada terapis yang tersedia.</div>';
+            return;
+        }
+
+        terapis.forEach(t => {
+            let photoUrl = t.photo_url || '';
+            // Handle google drive old links just in case
+            if (photoUrl && photoUrl.includes('drive.google.com/file/d/')) {
+                const match = photoUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                if (match && match[1]) {
+                    photoUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+                }
+            }
+
+            let photoHtml = photoUrl ? `<img src="${photoUrl}" referrerpolicy="no-referrer" style="width:100%; height:80px; object-fit:cover;">` : `<div style="width:100%; height:80px; background:#ccc; display:flex; justify-content:center; align-items:center; color:white;"><i class="fas fa-user fa-2x"></i></div>`;
+            
+            const card = document.createElement('div');
+            card.className = 'fav-card terapis-card';
+            card.id = `terapis-card-${t.id}`;
+            card.style.minWidth = '110px';
+            card.style.border = '2px solid transparent';
+            card.onclick = () => pilihTerapis(t.id, t.name);
+            
+            card.innerHTML = `
+                ${photoHtml}
+                <div class="fav-info" style="padding: 8px;">
+                    <div class="fav-title" style="font-size:0.8rem; text-align:center;">${t.name}</div>
+                    <div class="fav-subtitle" style="font-size:0.6rem; text-align:center;">Terapis Profesional</div>
+                </div>
+            `;
+            slider.appendChild(card);
+        });
+    }
+
+    function pilihTerapis(id, name) {
+        // Reset all cards border
+        document.querySelectorAll('.terapis-card').forEach(c => {
+            c.style.borderColor = 'transparent';
+            c.style.background = '#fff';
+        });
+
+        const selectedIdInput = document.getElementById('selectedTerapisId');
+        
+        // If clicking the same therapist, unselect it
+        if (selectedIdInput.value === id) {
+            selectedIdInput.value = '';
+            document.getElementById('selectedTerapisName').value = '';
+            showToast('Pilihan terapis dibatalkan.');
+            return;
+        }
+
+        // Select new therapist
+        selectedIdInput.value = id;
+        document.getElementById('selectedTerapisName').value = name;
+        
+        const card = document.getElementById(`terapis-card-${id}`);
+        card.style.borderColor = 'var(--primary)';
+        card.style.background = 'var(--primary-light)';
+        
+        showToast(`Terapis ${name} dipilih!`);
+        document.getElementById('pesan').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    window.onload = function() {
+        try {
+            loadTerapisDiBeranda();
+        } catch(e) {
+            console.error('Error loading terapis:', e);
+        }
+    }  
+
+    function debounce(fn, d) { let t; return function(...a) { clearTimeout(t); t = setTimeout(() => fn.apply(this, a), d); }; }
+    function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+    function renderLocationList(items, list, type, query) {
+        list.innerHTML = '';
+        if (!items.length) { list.innerHTML = '<li class="loading-text">Lokasi tidak ditemukan di Tegal & Brebes.</li>'; list.style.display = 'block'; return; }
+        items.forEach(item => {
+            const li = document.createElement('li');
+            const dn = item.displayName || item.name;
+            const safe = escapeHtml(dn), sq = escapeHtml(query.trim());
+            const hl = sq ? safe.replace(new RegExp(`(${escapeRegExp(sq)})`, 'ig'), '<strong>$1</strong>') : safe;
+            li.innerHTML = `<i class="fas fa-map-marker-alt"></i> <span>${hl}</span>`;
+            li.onclick = () => selectLocation(item, type, list, dn);
+            list.appendChild(li);
+        });
+        list.style.display = 'block';
+    }
+
+    function fetchLocations(query, list, type) {
+        const nq = query.trim().toLowerCase();
+        const cq = nq.replace(/^(desa|kelurahan|kecamatan|kec\.|kab\.|kabupaten)\s+/i, '').trim();
+        
+        if (!cq) {
+            list.style.display = 'none';
+            return;
+        }
+
+        // Search offline database directly
+        const results = DESA_DATABASE.filter(i => i.name.toLowerCase().includes(cq));
+        
+        // Sort to prioritize exact startsWith matches or shorter strings
+        results.sort((a, b) => {
+            const aName = a.name.toLowerCase();
+            const bName = b.name.toLowerCase();
+            if (aName.startsWith(cq) && !bName.startsWith(cq)) return -1;
+            if (!aName.startsWith(cq) && bName.startsWith(cq)) return 1;
+            return aName.length - bName.length;
+        });
+
+        // Show max 15 results
+        renderLocationList(results.slice(0, 15), list, type, query);
+    }
+
+    const tujuanInput = document.getElementById('orderTujuan'), tujuanList = document.getElementById('tujuanList');
+    tujuanInput.addEventListener('input', e => { 
+        state.dropoff = { name:'', lat:null, lon:null }; 
+        // Jangan hide resultBox agar harga tetap tampil
+        if (e.target.value.length >= 2) fetchLocations(e.target.value, tujuanList, 'dropoff'); 
+        else tujuanList.style.display = 'none'; 
+    });
+    tujuanInput.addEventListener('blur', e => {
+        setTimeout(() => {
+            if (!state.dropoff.lat && e.target.value.length >= 2) {
+                const cq = e.target.value.toLowerCase().replace(/^(desa|kelurahan|kecamatan|kec\.|kab\.|kabupaten)\s+/i, '').trim();
+                const results = DESA_DATABASE.filter(i => i.name.toLowerCase().includes(cq));
+                if (results.length > 0) selectLocation(results[0], 'dropoff', tujuanList, results[0].displayName || results[0].name);
+            }
+        }, 200);
+    });
+
+    // Maps / OSRM logic dihapus karena ini layanan home service dengan harga tetap
+
+    // === SUPABASE ORDER (Ganti dari WhatsApp) ===
+    document.getElementById('orderForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!state.dropoff.lat) { showToast('Pilih lokasi Anda dari dropdown dulu ya.'); return; }
+        
+        const btn = document.querySelector('#orderForm button[type="submit"]');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+        btn.disabled = true;
+
+        try {
+            // Pastikan user sudah login
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                alert("Anda harus login terlebih dahulu untuk membuat pesanan!");
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const catatan = document.getElementById('orderCatatan').value;
+            const td = document.getElementById('orderTujuanDetail').value;
+            const dName = state.dropoff.displayName || state.dropoff.name;
+            const paymentMethod = document.getElementById('orderPaymentMethod').value;
+            const selectedTerapisId = document.getElementById('selectedTerapisId').value;
+            const selectedTerapisName = document.getElementById('selectedTerapisName').value;
+            
+            const jemput = 'Panggilan ke Rumah'; // Tidak ada penjemputan jastip lagi
+            const tujuan = dName + (td ? ` (${td})` : '');
+            const infoLengkap = `Layanan: ${state.currentServiceText} | Keluhan: ${catatan}`;
+
+            const { error } = await supabaseClient.from('pesanan_pijat').insert([{
+                user_id: session.user.id,
+                pickup_location: jemput,
+                destination: tujuan,
+                details: infoLengkap,
+                price: state.ongkir,
+                payment_method: paymentMethod,
+                status: paymentMethod === 'QRIS' ? 'menunggu_pembayaran' : 'menunggu',
+                mitra_id: selectedTerapisId || null
+            }]);
+
+            if (error) throw error;
+
+            showToast('Pesanan berhasil dibuat!');
+            
+            // Format Pesan WhatsApp ke Admin
+            let terapisPilihanTeks = selectedTerapisName ? `\n*Terapis Pilihan:* ${selectedTerapisName}` : `\n*Terapis Pilihan:* Siapa saja (Bebas)`;
+            const waText = encodeURIComponent(`*💆‍♂️ PANGGILAN PIJAT BARU! 💆‍♀️*\n\n*Layanan:* ${state.currentServiceText}\n\n*Lokasi Pelanggan:*\n📍 ${dName}\n📝 Alamat: ${td || '-'}\n\n*Keluhan / Catatan:* ${catatan || '-'}${terapisPilihanTeks}\n\n*Pembayaran:* ${paymentMethod}\n*Total Estimasi:* Rp ${state.ongkir.toLocaleString('id-ID')}\n\nTolong segera konfirmasi!`);
+
+            if(paymentMethod === 'QRIS') {
+                showQris(waText); // Menampilkan popup QRIS (di dalamnya sudah ada tombol WA)
+                
+                // Reset tombol
+                btn.innerHTML = 'Pesan Sekarang <i class="fas fa-arrow-right"></i>';
+                btn.disabled = false;
+            } else {
+                alert('Sukses! Membuka WhatsApp Admin untuk konfirmasi...');
+                window.open(`https://wa.me/628995882032?text=${waText}`, '_blank');
+                
+                // Beri jeda 1 detik agar tab WA terbuka sebelum pindah halaman
+                setTimeout(() => {
+                    if (window.parent && window.parent !== window) {
+                        if (typeof window.parent.switchView === 'function') {
+                            window.parent.switchView('pelanggan-riwayat');
+                            window.parent.loadPelangganOrders();
+                        } else {
+                            window.parent.location.href = 'dashboard.html';
+                        }
+                    } else {
+                        window.location.href = 'dashboard.html';
+                    }
+                }, 1000);
+            }
+
+        } catch (err) {
+            alert("Gagal membuat pesanan: " + err.message);
+            btn.innerHTML = 'Pesan Sekarang <i class="fas fa-arrow-right"></i>';
+            btn.disabled = false;
+        }
+    });
+
+    // === COPY DANA ===
+    function copyDana(btn) {
+        navigator.clipboard.writeText('08995882032').then(() => {
+            btn.innerHTML = '<i class="fas fa-check"></i> Tersalin!';
+            btn.classList.add('copied');
+            showToast('Nomor DANA berhasil disalin!');
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-copy"></i> Salin';
+                btn.classList.remove('copied');
+            }, 2000);
+        }).catch(() => {
+            // Fallback for older browsers
+            const ta = document.createElement('textarea');
+            ta.value = '08995882032';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            btn.innerHTML = '<i class="fas fa-check"></i> Tersalin!';
+            btn.classList.add('copied');
+            showToast('Nomor DANA berhasil disalin!');
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-copy"></i> Salin';
+                btn.classList.remove('copied');
+            }, 2000);
+        });
+    }
+
+    // === QRIS MODAL ===
+    function showQris(waText) {
+        if (waText) {
+            const finalWaText = waText + encodeURIComponent('\n\nBerikut saya lampirkan bukti transfer QRIS:');
+            document.getElementById('qrisWaButton').href = `https://wa.me/628995882032?text=${finalWaText}`;
+        }
+        document.getElementById('qrisModal').classList.add('show');
+    }
+    function closeQris(e) {
+        if (!e || e.target === document.getElementById('qrisModal') || e.target.closest('.qris-close')) {
+            document.getElementById('qrisModal').classList.remove('show');
+        }
+    }
+
+    // === NEW FEATURES JS ===
+    // 1. Dark Mode Toggle
+    const darkToggle = document.getElementById('darkModeToggle');
+    const isDark = localStorage.getItem('jastip-dark-mode') === 'true';
+    if (isDark) document.body.classList.add('dark-mode');
+    
+    darkToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('jastip-dark-mode', document.body.classList.contains('dark-mode'));
+    });
+
+    // 2. Set Favorite Spots
+    function setFavorite(namaToko, kecamatan) {
+        document.getElementById('orderPickupDetail').value = namaToko;
+        
+        // Find the best match from DESA_DATABASE for the kecamatan/desa
+        const nq = kecamatan.toLowerCase();
+        const results = DESA_DATABASE.filter(i => i.name.toLowerCase().includes(nq));
+        
+        if (results.length > 0) {
+            // Auto select the first best match
+            const bestMatch = results[0];
+            const dn = bestMatch.displayName || bestMatch.name;
+            const type = 'pickup';
+            
+            document.getElementById('orderPickup').value = dn;
+            document.getElementById('pickupList').style.display = 'none';
+            state.pickup = { name: bestMatch.name, lat: bestMatch.lat, lon: bestMatch.lon, displayName: dn };
+            
+            if (state.pickup.lat && state.dropoff.lat) calculateRouteAndPrice();
+        } else {
+            document.getElementById('orderPickup').value = kecamatan;
+        }
+
+        document.getElementById('pesan').scrollIntoView({ behavior: 'smooth' });
+        showToast('Memilih ' + namaToko + '...');
+    }
+
+    // 3. Promo Code Notification
+    function applyPromo() {
+        const code = document.getElementById('orderPromo').value.trim();
+        if (code.length < 3) {
+            showToast('Masukkan kode promo yang valid!');
+            return;
+        }
+        showToast('Kode promo ' + code.toUpperCase() + ' diterapkan!');
+    }
+</script>
+
+
+<!-- PWA Service Worker Registration -->
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').then(registration => {
+                console.log('ServiceWorker registration successful');
+            }).catch(err => {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+    }
+</script>
+
+    <script src="js/supabase.js?v=5"></script>
+    <script src="js/auth.js?v=5"></script>
+<script>
+    // Hapus script insert lama yang salah sasaran
+    document.addEventListener("DOMContentLoaded", async () => {
+        // Cukup cek sesi agar user dialihkan jika belum login dan mengakses halaman yang dilindungi
+        // (index.html tidak dilindungi secara penuh, tapi dicek saat submit)
+    });
+</script>
+
+</body>
+</html>
