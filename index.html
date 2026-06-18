@@ -1002,6 +1002,7 @@
             <p style="font-size:0.65rem; color:var(--text-gray); text-align:center; margin-top:5px;">Klik untuk memilih terapis langganan Anda</p>
             <input type="hidden" id="selectedTerapisId" value="">
             <input type="hidden" id="selectedTerapisName" value="">
+            <input type="hidden" id="selectedTerapisSaldo" value="">
         </div>
 
         <!-- ORDER FORM -->
@@ -1453,7 +1454,7 @@
             card.id = `terapis-card-${t.id}`;
             card.style.minWidth = '110px';
             card.style.border = '2px solid transparent';
-            card.onclick = () => pilihTerapis(t.id, t.name);
+            card.onclick = () => pilihTerapis(t.id, t.name, t.saldo);
             
             card.innerHTML = `
                 ${photoHtml}
@@ -1466,32 +1467,50 @@
         });
     }
 
-    function pilihTerapis(id, name) {
-        // Reset all cards border
+    function pilihTerapis(id, name, saldo) {
         document.querySelectorAll('.terapis-card').forEach(c => {
             c.style.borderColor = 'transparent';
             c.style.background = '#fff';
         });
 
         const selectedIdInput = document.getElementById('selectedTerapisId');
+        const paymentSelect = document.getElementById('orderPaymentMethod');
+        const selectedSaldoInput = document.getElementById('selectedTerapisSaldo');
         
-        // If clicking the same therapist, unselect it
         if (selectedIdInput.value === id) {
             selectedIdInput.value = '';
             document.getElementById('selectedTerapisName').value = '';
+            selectedSaldoInput.value = '';
+            
+            // Restore payment options
+            Array.from(paymentSelect.options).forEach(opt => opt.disabled = false);
+            
             showToast('Pilihan terapis dibatalkan.');
             return;
         }
 
-        // Select new therapist
         selectedIdInput.value = id;
         document.getElementById('selectedTerapisName').value = name;
+        selectedSaldoInput.value = saldo || 0;
         
         const card = document.getElementById(`terapis-card-${id}`);
         card.style.borderColor = 'var(--primary)';
         card.style.background = 'var(--primary-light)';
         
-        showToast(`Terapis ${name} dipilih!`);
+        // Cek saldo terapis
+        const numSaldo = parseFloat(saldo) || 0;
+        if (numSaldo <= 0) {
+            paymentSelect.value = 'QRIS';
+            Array.from(paymentSelect.options).forEach(opt => {
+                if(opt.value === 'Tunai') opt.disabled = true;
+            });
+            showToast(`Terapis ${name} (Wajib QRIS)`);
+            setTimeout(() => alert(`Terapis ${name} saat ini hanya dapat menerima pembayaran via QRIS/Transfer.`), 400);
+        } else {
+            Array.from(paymentSelect.options).forEach(opt => opt.disabled = false);
+            showToast(`Terapis ${name} dipilih!`);
+        }
+        
         document.getElementById('pesan').scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -1591,6 +1610,14 @@
             const paymentMethod = document.getElementById('orderPaymentMethod').value;
             const selectedTerapisId = document.getElementById('selectedTerapisId').value;
             const selectedTerapisName = document.getElementById('selectedTerapisName').value;
+            const selectedTerapisSaldo = parseFloat(document.getElementById('selectedTerapisSaldo').value) || 0;
+            
+            if (selectedTerapisId && selectedTerapisSaldo <= 0 && paymentMethod === 'Tunai') {
+                alert(`Maaf, terapis ${selectedTerapisName} sedang tidak bisa menerima pesanan Tunai. Silakan pilih metode pembayaran QRIS, atau pilih terapis lain.`);
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Pesan Sekarang';
+                btn.disabled = false;
+                return;
+            }
             
             const jemput = 'Panggilan ke Rumah'; // Tidak ada penjemputan jastip lagi
             const tujuan = dName + (td ? ` (${td})` : '');
